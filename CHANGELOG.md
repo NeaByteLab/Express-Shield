@@ -26,7 +26,7 @@
 
 ---
 
-## [1.0.0] - 2025-06-01
+## [1.0.0] - 2025-06-30
 
 ### Added
 - Initial stable release: Express middleware with rate limiting, fingerprinting, security headers, and Cloudflare-aware IP trust.
