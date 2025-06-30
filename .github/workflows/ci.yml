@@ -1,4 +1,3 @@
-# .github/workflows/ci.yml
 name: CI
 
 on:
@@ -6,16 +5,19 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  schedule:
+    - cron: '0 */12 * * *' # Run every 12 hours (00:00 + 12:00 UTC)
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
-      # Test against Node.js LTS versions that align with your engine requirements
-      # '18.x' covers Node.js 18 LTS
-      # '20.x' covers Node.js 20 LTS
       matrix:
-        node-version: ['18.x', '20.x'] # Updated to test against LTS versions
+        node-version: ['18.x', '20.x']
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -24,18 +26,41 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm' # Cache npm dependencies for faster builds
+          cache: 'npm'
 
       - name: Install dependencies
-        # 'npm ci' is preferred in CI environments for clean and consistent installs
         run: npm ci
 
+      - name: Update Cloudflare IP list
+        run: node ./script/update-cloudflare-ip.js
+
+      - name: Validate IP data and commit if changed
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          IPV4_COUNT=$(jq length data/cloudflare_ipv4.json)
+          IPV6_COUNT=$(jq length data/cloudflare_ipv6.json)
+
+          echo "✅ IPv4 count: $IPV4_COUNT"
+          echo "✅ IPv6 count: $IPV6_COUNT"
+
+          if [ "$IPV4_COUNT" -gt 0 ] && [ "$IPV6_COUNT" -gt 0 ]; then
+            git add data/
+            if git diff --cached --quiet; then
+              echo "✅ No changes to commit (data is valid but unchanged)"
+            else
+              git commit -m "ci: update Cloudflare IP data 🌐 [skip ci]"
+              git push origin main
+            fi
+          else
+            echo "⚠️ IP data invalid or empty, skipping commit"
+          fi
+
       - name: Build TypeScript declarations
-        # Ensures that your TypeScript declaration files are correctly generated
         run: npm run build:types
 
       - name: Run tests
-        # Executes your test suite, including coverage
         run: npm test
 
       - name: Upload coverage to Codecov
@@ -44,4 +69,4 @@ jobs:
           file: ./coverage/lcov.info
           fail_ci_if_error: true
           verbose: true
-          flags: ${{ matrix.node-version }} # This will tag reports with '18.x' or '20.x'
+          flags: ${{ matrix.node-version }}
