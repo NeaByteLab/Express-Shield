@@ -26,6 +26,13 @@
 
 ---
 
+## [1.0.0] - 2025-06-01
+
+### Added
+- Initial stable release: Express middleware with rate limiting, fingerprinting, security headers, and Cloudflare-aware IP trust.
+
+---
+
 **Migration:**  
 - Run `npm install` or `npm run postinstall` to fetch the latest Cloudflare IPs to the `data/` folder.
 - No code migration needed for existing usage.
