@@ -12,6 +12,13 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["index.js"],
-  "exclude": ["node_modules", "tests"]
+  "include": [
+    "index.js",
+    "script/update-cloudflare-ip.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "tests",
+    "data"
+  ]
 }

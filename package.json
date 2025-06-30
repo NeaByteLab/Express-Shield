@@ -1,21 +1,26 @@
 {
   "name": "@neabyte/express-shield",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Express Middleware With Rate-Limit And Security Headers",
   "main": "index.js",
   "types": "lib/index.d.ts",
   "files": [
     "index.js",
-    "lib/**/*.d.ts"
+    "lib/**/*.d.ts",
+    "data/**/*",
+    "script/update-cloudflare-ip.js"
   ],
   "scripts": {
+    "test": "jest --coverage --detectOpenHandles",
     "build:types": "tsc",
     "prepublishOnly": "npm run build:types && npm test",
-    "test": "jest --coverage"
+    "update:cloudflare-ip": "node ./script/update-cloudflare-ip.js",
+    "postinstall": "node ./script/update-cloudflare-ip.js"
   },
   "engines": {
     "node": ">=18.20.8"
   },
+  "enginesStrict": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/NeaByteLab/Express-Shield.git"
@@ -29,7 +34,8 @@
     "middleware",
     "rate-limit",
     "security",
-    "redis"
+    "redis",
+    "cloudflare"
   ],
   "author": "NeaByteLab",
   "license": "MIT",

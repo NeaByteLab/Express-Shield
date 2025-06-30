@@ -1,68 +1,67 @@
-🛡️ @neabyte/express-shield
+# 🛡️ @neabyte/express-shield
 
+[![release](https://img.shields.io/github/v/tag/NeaByteLab/Express-Shield)](https://github.com/NeaByteLab/Express-Shield/releases)
 [![npm version](https://img.shields.io/npm/v/@neabyte/express-shield.svg)](https://www.npmjs.com/package/@neabyte/express-shield)
 [![CI](https://img.shields.io/github/actions/workflow/status/NeaByteLab/Express-Shield/ci.yml?branch=main)](https://github.com/NeaByteLab/Express-Shield/actions)
 [![coverage](https://img.shields.io/codecov/c/github/NeaByteLab/express-shield)](https://codecov.io/gh/NeaByteLab/express-shield)
 
-A lightweight and robust Express middleware designed to enhance your application's security through efficient rate limiting, unique client fingerprinting, and automatic application of essential security headers.
+Lightweight Express middleware for **rate limiting**, **unique client fingerprinting**, Cloudflare-aware IP trust, and **essential security headers** 🛡️  
+Now with **auto-updated Cloudflare IP lists**, **hot-reload without restart**, and **zero dependency design** for production-grade security and flexibility.
 
 ---
 
 ## ✨ Features
 
-- 🚦 **Rate Limiting**: Configurable time window and maximum requests per IP address to prevent abuse.
+* 🔁 **Auto-updated Cloudflare IPs**: Automatically keeps the IP whitelist in sync with Cloudflare’s official ranges (IPv4/IPv6) and hot-reloads without restart.
+* 🚦 **Rate Limiting**: Configurable time window and maximum requests per IP address (with Cloudflare trusted IP logic).
+* 🔒 **Fingerprinting**: Generates a unique, consistent client fingerprint for better request tracking.
+* 🛡️ **Security Headers**: Automatically applies crucial HTTP security headers (`X-Content-Type-Options`, `Strict-Transport-Security`, `X-Frame-Options`, `Referrer-Policy`, and more).
+* 🎨 **Custom Error Responses**: Override default 429 (Too Many Requests) handler with custom logic/format.
+* 📦 **Modular Design**: Redis is optional; rate limiting is skipped if no Redis is supplied.
+* ⚙️ **TypeScript Support**: Built-in `.d.ts` types, fully typed exports.
+* 🔄 **Zero External Dependency**: No deps except Express and (optionally) ioredis for rate-limit.
 
-- 🔒 **Fingerprinting**: Generates a unique, consistent client fingerprint for better request tracking.
-
-- 🛡️ **Security Headers**: Automatically applies crucial HTTP security headers, including `X-Content-Type-Options`, `Strict-Transport-Security`, `X-Frame-Options`, and `X-Powered-By`.
-
-- 🎨 **Custom Error Responses**: Allows overriding the default 429 (Too Many Requests) handler with custom logic and response formats.
-
-- 📦 **Modular Design**: Optional Redis support; rate limiting is automatically skipped when no Redis client is provided, offering flexibility.
-
-- ⚙️ **TypeScript Support**: Includes built-in `.d.ts` declarations for a seamless development experience with full autocomplete.
-
-- 🔄 **Minimal & Lightweight**: Zero external dependencies beyond Express and the optional `ioredis`.
-
+---
 
 ## 🚀 Installation
 
-```bash
+```sh
 npm install @neabyte/express-shield
 ```
 
-> Requires Node.js >=18.20.8 📌
+> Requires Node.js >=18.20.8
+* After install, Cloudflare IPs are fetched to `data/` folder.
+* To update manually: `node ./script/update-cloudflare-ip.js`
 
 ---
 
 ## 🛠️ Quick Start
 
 ### With Redis (Enables Rate Limiting)
+
 ```js
 const express = require('express')
 const Redis = require('ioredis')
 const { createExpressShield } = require('@neabyte/express-shield')
 
 const app = express()
-const redisClient = new Redis() // Initialize your Redis client
+const redisClient = new Redis()
 
-// Apply the middleware with Redis for rate limiting
 app.use(
   createExpressShield(
-    redisClient, // Pass the Redis client
+    redisClient,
     {
-      app, // Pass the Express app instance
-      windowSec: 60, // Rate limit window of 60 seconds
-      maxRequests: 10, // Allow 10 requests per IP within the window
-      showHeader: true, // Include X-Fingerprint-Id header
-      showLog: false, // Disable internal console logging
-      applySecurity: true, // Apply security headers
+      app,
+      windowSec: 60,
+      maxRequests: 10,
+      showHeader: true,
+      showLog: false,
+      applySecurity: true,
       customErrorResponse: (req, res, ttl) => {
-        // Custom 429 error response
         res.status(429).json({
           error: 'Too many requests',
           ip: req.fingerprint.ip,
-          retryAfterSec: ttl // Time until the client can retry
+          retryAfterSec: ttl
         })
       }
     }
@@ -77,19 +76,19 @@ app.listen(3000, () => console.log('Server running on port 3000 🚀'))
 ```
 
 ### Without Redis (Skips Rate Limiting)
+
 ```js
 const express = require('express')
 const { createExpressShield } = require('@neabyte/express-shield')
 
 const app = express()
 
-// Apply the middleware without Redis (rate limiting will be skipped)
 app.use(
   createExpressShield(
-    null, // Pass null or undefined as the Redis client
+    null,
     {
-      app, // Pass the Express app instance
-      applySecurity: true // Still applies security headers
+      app,
+      applySecurity: true
     }
   )
 )
@@ -103,48 +102,74 @@ app.listen(3000, () => console.log('Server running on port 3000 🚀'))
 
 ---
 
-## 🧩 Parameters & Defaults
-The `createExpressShield` function accepts a `redisClient` and an `options` object.
+## ⚡ Cloudflare IP Support
 
-| Parameter | Type | Default | Description |
-| :----- | :----- | :----- | :----- |
-| `redisClient` | `object?` | `null` | Optional `ioredis` client instance. If falsy, rate limiting is bypassed. |
-| `options.app` | `Express` | `null` | **Required** Express application instance for applying security headers. |
-| `options.windowSec` | `number` | `60` | The duration, in seconds, for the rate-limit window. |
-| `options.maxRequests` | `number` | `10` | The maximum allowed requests per unique IP within the `windowSec` period. |
-| `options.showHeader` | `boolean` | `true` | If `true`, includes the `X-Fingerprint-Id` header in responses. |
-| `options.showLog` | `boolean` | `false` | If `true`, enables console logging for internal events and actions. |
-| `options.applySecurity` | `boolean` | `true` | If `true`, applies a set of standard HTTP security headers to responses. |
-| `options.customErrorResponse` | `function` | Default 429 JSON response | A custom function to handle responses when a client hits the rate limit. Signature: `(req, res, ttl) => void`. |
-| `options.ipResolver` | `function` | `getClientIpAddress(req)` | An optional custom function to determine the client's IP address from the request object. Signature: `(req) => string`. |
+* The IP whitelist used for trusting `cf-connecting-ip` is **auto-updated** using [Cloudflare’s published range](https://www.cloudflare.com/ips/).
+* After install, files `data/cloudflare_ipv4.json` and `data/cloudflare_ipv6.json` are created/updated.
+* IPs are **hot-reloaded** at runtime (no restart needed).
+* To force reload in app code:
+
+  ```js
+  const { reloadCloudflareIpList } = require('@neabyte/express-shield')
+  reloadCloudflareIpList()
+  ```
+
+---
+
+## 🧩 Parameters & Defaults
+
+| Parameter                     | Type      | Default              | Description                                                    |
+| ----------------------------- | --------- | -------------------- | -------------------------------------------------------------- |
+| `redisClient`                 | object?   | `null`               | Optional `ioredis` instance. If falsy, disables rate limiting. |
+| `options.app`                 | Express   | `null`               | Express app instance for header patching.                      |
+| `options.windowSec`           | number    | `60`                 | Duration of the rate limit window (seconds).                   |
+| `options.maxRequests`         | number    | `10`                 | Max allowed requests per IP within the window.                 |
+| `options.showHeader`          | boolean   | `true`               | Show `X-Fingerprint-Id` header.                                |
+| `options.showLog`             | boolean   | `false`              | Enable debug console logging.                                  |
+| `options.applySecurity`       | boolean   | `true`               | Apply HTTP security headers.                                   |
+| `options.customErrorResponse` | function  | default 429 JSON     | Custom 429 handler. `(req, res, ttl) => void`                  |
+| `options.whitelist`           | string\[] | `[]`                 | Skip rate-limit for these IPs.                                 |
+| `options.ipResolver`          | function  | `getClientIpAddress` | Custom IP resolver (rarely needed).                            |
 
 ---
 
 ## 📖 API Reference
 
-* **`createExpressShield(redisClient, options)`**
-  * The main factory function that returns the Express middleware.
-  * `@param {object | null} redisClient` - An `ioredis` client instance or `null`.
-  * `@param {object} options` - Configuration options (see "Parameters & Defaults" table).
-  * `@returns {function}` - An Express middleware function.
+* **`createExpressShield(redisClient, options)`**  
+  Creates the Express middleware. Handles security headers, fingerprinting, rate limit (if Redis provided).
 
-* **`getClientIpAddress(req)`**
-  * A utility function used internally to detect the client's IP address. It checks `X-Forwarded-For` and `req.ip`.
-  * `@param {object} req` - The Express request object.
-  * `@returns {string}` - The detected IP address.
+* **`getClientIpAddress(req)`**  
+  Returns the trusted client IP. Automatically checks `cf-connecting-ip` if request comes from Cloudflare IP range.
 
-* **`generateFingerprintHash(req)`**
-  * A utility function that generates a SHA256 fingerprint based on the client's IP address, User-Agent, and Accept headers.
-  * `@param {object} req` - The Express request object.
-  * `@returns {string}` - The generated SHA256 fingerprint hash.
+* **`generateFingerprintHash(req)`**  
+  Returns a SHA256 hash of client IP + headers (used for fingerprinting).
+
+* **`reloadCloudflareIpList()`**  
+  Forces reload of Cloudflare IPv4 + IPv6 lists from `data/` folder. Useful for manual reload or custom schedulers.
+
+* **`watchCloudflareIpList()`**  
+  Starts file watcher. Automatically reloads Cloudflare IPs when `data/cloudflare_ipv4.json` or `data/cloudflare_ipv6.json` change.
+
+* **`CLOUDFLARE_IPV4` / `CLOUDFLARE_IPV6`**  
+  Exposes current trusted Cloudflare IP lists (arrays of CIDR).
+
+* **`checkIpInCidrList(ip, cidrList)`**  
+  Utility to check if an IP (IPv4/IPv6) is within any CIDR in the list.
+
+* **`checkIpv4InCidr(ip, cidr)` / `checkIpv6InCidr(ip, cidr)`**  
+  Low-level CIDR match utilities for IPv4 / IPv6.
+
+* **`convertIpv4ToNumber(ip)` / `convertIpv6ToBigint(ip)`**  
+  Internal helpers to convert IP addresses for CIDR math (exposed for testability).
+
+> Note: All utility functions are exposed primarily for testing and advanced use cases.  
+> Typical users only need `createExpressShield` and optionally `reloadCloudflareIpList`.
 
 ---
 
 ## ✅ Running Tests Locally
 
-To run the unit tests for this project, clone the repository and execute the following commands:
-
-```bash
+```sh
 npm install
 npm test
 ```
@@ -158,6 +183,18 @@ npm test
 3. Commit your changes (`git commit -am 'Add some your-feature-name'`)
 4. Push to the branch (`git push origin feature/your-feature-name`)
 5. Open a Pull Request 📬
+
+---
+
+## 📬 Questions / Support
+
+For questions, issues or feature requests, please open an [issue](https://github.com/NeaByteLab/Express-Shield/issues) or start a [discussion](https://github.com/NeaByteLab/Express-Shield/discussions).
+
+---
+
+## 🗒️ Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for all updates.
 
 ---
 

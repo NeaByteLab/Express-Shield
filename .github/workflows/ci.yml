@@ -39,13 +39,9 @@ jobs:
         run: npm test
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5 # Updated to v5
+        uses: codecov/codecov-action@v5
         with:
-          # A token is usually not needed for public repositories,
-          # but for private repos, you'd set it up as a GitHub secret:
-          # token: ${{ secrets.CODECOV_TOKEN }}
-          # Path to your coverage report. Jest usually outputs to 'coverage/lcov.info'
-          # Adjust this if your coverage tool outputs to a different path.
           file: ./coverage/lcov.info
-          fail_ci_if_error: true # Fail the CI pipeline if Codecov upload fails
-          verbose: true # Enable verbose logging for debugging
+          fail_ci_if_error: true
+          verbose: true
+          flags: ${{ matrix.node-version }} # This will tag reports with '18.x' or '20.x'
